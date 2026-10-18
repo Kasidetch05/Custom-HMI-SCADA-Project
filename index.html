@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Robot Cell HMI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Icon sprite (Lucide-style, 24px grid, 2px stroke) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-overview" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></symbol>
+      <symbol id="i-quality" viewBox="0 0 24 24"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="m8 12 3 3 5-6"/></symbol>
+      <symbol id="i-robot" viewBox="0 0 24 24"><path d="M4 21h9"/><path d="M6 21v-4h5v4"/><circle cx="8.5" cy="13.5" r="2"/><path d="m9.6 11.8 3.6-5.6"/><circle cx="14.5" cy="5" r="2"/><path d="m16.3 5.8 2.7 2.7"/><path d="M17 11l2.5-2.5L22 11"/></symbol>
+      <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z"/></symbol>
+      <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+      <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+      <symbol id="i-person" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="m9 21 2-6M15 21l-2-6M7 11l2.5-3h5L17 11M11 15l-.5-7M13 15l.5-7"/></symbol>
+      <symbol id="i-jam" viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="4" rx="2"/><path d="M7 14V9h5v5M12 14V7h5v7"/><path d="m9 4 2 2M15 3v2"/></symbol>
+      <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+      <symbol id="i-batch" viewBox="0 0 24 24"><path d="M3 7h7v7H3zM14 7h7v7h-7z"/><path d="m16 9 3 3M19 9l-3 3"/><path d="M3 18h18"/></symbol>
+      <symbol id="i-thermo" viewBox="0 0 24 24"><path d="M14 4v10.54a4 4 0 1 1-4 0V4a2 2 0 0 1 4 0Z"/></symbol>
+      <symbol id="i-report" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 18v-3M12 18v-6M16 18v-2"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+      <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+      <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5M3 12a9 3 0 0 0 18 0"/></symbol>
+      <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></symbol>
+    </defs>
+  </svg>
+
+  <a class="skip" href="#main">Skip to content</a>
+
+  <div class="app">
+    <nav class="side" aria-label="Main">
+      <div class="brand">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><rect x="2" y="2" width="28" height="28" rx="7"/><path d="M9 23h9M11 23v-4h5v4M13.5 16l4-6 5 3"/></svg>
+        <span>Cell monitor</span>
+      </div>
+      <a class="nav-item" href="#overview" data-view="overview"><svg class="ic"><use href="#i-overview"/></svg><span>Overview</span></a>
+      <a class="nav-item" href="#quality" data-view="quality"><svg class="ic"><use href="#i-quality"/></svg><span>Quality</span></a>
+      <a class="nav-item" href="#robot" data-view="robot"><svg class="ic"><use href="#i-robot"/></svg><span>Robot</span></a>
+      <a class="nav-item" href="#alarms" data-view="alarms"><svg class="ic"><use href="#i-bell"/></svg><span>Alarms</span><b class="nav-badge" id="navBadge" hidden>0</b></a>
+      <a class="nav-item" href="#reports" data-view="reports"><svg class="ic"><use href="#i-report"/></svg><span>Reports</span></a>
+      <div class="side-foot">
+        <span class="conn" id="conn"><i></i><span>Connecting…</span></span>
+        <span class="sim-note">Simulation. No real hardware is connected.</span>
+      </div>
+    </nav>
+
+    <header class="top">
+      <div>
+        <h1>Pick and inspect cell 1</h1>
+        <p class="sub">Robot R1 checks every box, sends good ones to packing and drops bad ones in the reject bin.</p>
+      </div>
+      <div class="top-right">
+        <span class="state-chip" id="stateChip" data-state="stopped"><i></i><span>Stopped</span></span>
+        <span class="clock" id="clock">--:--</span>
+      </div>
+    </header>
+
+    <main id="main" tabindex="-1">
+
+      <!-- ===================== OVERVIEW ===================== -->
+      <section class="view" id="view-overview" aria-labelledby="h-overview">
+        <h2 class="sr-only" id="h-overview">Overview</h2>
+        <div class="ov">
+
+          <div class="panel cell">
+            <div class="cell-stage">
+              <canvas id="cellCanvas" role="img" aria-label="Live drawing of the robot cell"></canvas>
+              <div class="cell-overlay">
+                <span class="live" id="liveTag"><i></i>Live simulation</span>
+                <span class="legend-chip"><svg class="ic sm ok"><use href="#i-check"/></svg>Passed</span>
+                <span class="legend-chip"><svg class="ic sm bad"><use href="#i-x"/></svg>Rejected</span>
+              </div>
+              <div class="stop-veil" id="stopVeil" hidden>
+                <svg class="ic"><use href="#i-alert"/></svg><span id="stopVeilText">Stopped</span>
+              </div>
+            </div>
+            <ol class="steps" id="steps" aria-label="What happens to each box">
+              <li data-step="0"><b>1</b><span><strong>Arrive</strong><em>Box rides in on the belt</em></span></li>
+              <li data-step="1"><b>2</b><span><strong>Inspect</strong><em>Camera checks size, label, flaps and dents</em></span></li>
+              <li data-step="2"><b>3</b><span><strong>Pick</strong><em>Robot grips the box</em></span></li>
+              <li data-step="3"><b>4</b><span><strong>Sort</strong><em>Good to packing, bad to the bin</em></span></li>
+              <li data-step="4"><b>5</b><span><strong id="step5Name">Pack</strong><em id="step5Text">Box goes into a shipping case</em></span></li>
+            </ol>
+          </div>
+
+          <aside class="panel control" aria-labelledby="h-control">
+            <h2 id="h-control" class="panel-title">Cell control</h2>
+            <div class="banner" id="banner" data-state="stopped" aria-live="polite">
+              <div class="banner-head">
+                <svg class="ic" id="bannerIcon"><use href="#i-stop"/></svg>
+                <strong id="bannerTitle">Stopped</strong>
+              </div>
+              <p id="bannerText">The cell is ready.</p>
+              <p class="banner-next" id="bannerNext">Press Start to run the cell.</p>
+            </div>
+
+            <div class="btn-row">
+              <button class="btn primary" id="btnStart" data-cmd="start"><svg class="ic"><use href="#i-play"/></svg>Start</button>
+              <button class="btn" id="btnStop" data-cmd="stop"><svg class="ic"><use href="#i-stop"/></svg>Stop</button>
+              <button class="btn" id="btnReset" data-cmd="reset"><svg class="ic"><use href="#i-reset"/></svg>Reset</button>
+            </div>
+
+            <button class="estop" id="btnEstop" data-cmd="estop">
+              <span class="estop-knob" aria-hidden="true"></span>
+              <span><strong>Emergency stop</strong><small>Stops everything at once</small></span>
+            </button>
+
+            <div class="speed">
+              <label for="speed">Line speed <output id="speedOut">100%</output></label>
+              <input type="range" id="speed" min="25" max="150" step="5" value="100" aria-describedby="speedHelp">
+              <div class="speed-scale" id="speedHelp"><span>Slower</span><span>Normal</span><span>Faster</span></div>
+            </div>
+
+            <div class="mini">
+              <div class="mini-row">
+                <div>
+                  <span class="mini-label">Reject bin</span>
+                  <span class="mini-value"><b id="binText">0 of 8</b> boxes</span>
+                  <div class="meter" aria-hidden="true"><i id="binMeter"></i></div>
+                </div>
+                <button class="btn sm" id="btnEmpty" data-cmd="emptyBin"><svg class="ic"><use href="#i-trash"/></svg>Empty bin</button>
+              </div>
+              <div class="mini-row">
+                <div>
+                  <span class="mini-label">Shipping case <span id="caseNo">1</span></span>
+                  <span class="mini-value"><b id="caseText">0 of 6</b> boxes packed</span>
+                  <div class="case-slots" id="caseSlots" aria-hidden="true"></div>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <div class="panel kpis" aria-label="Today's numbers">
+            <div class="kpi">
+              <span class="kpi-label">Boxes packed</span>
+              <span class="kpi-value" id="kPacked">0</span>
+              <span class="kpi-note" id="kCases">0 cases shipped</span>
+            </div>
+            <div class="kpi">
+              <span class="kpi-label">Boxes rejected</span>
+              <span class="kpi-value" id="kRejected">0</span>
+              <span class="kpi-note" id="kInspected">0 inspected</span>
+            </div>
+            <div class="kpi">
+              <span class="kpi-label">Passed first time</span>
+              <span class="kpi-value"><span id="kYield">–</span><small>%</small></span>
+              <span class="kpi-note">Share of boxes with no defect</span>
+            </div>
+            <div class="kpi">
+              <span class="kpi-label">Speed</span>
+              <span class="kpi-value"><span id="kRate">0</span><small>boxes/min</small></span>
+              <span class="kpi-note" id="kCycle">Cycle time –</span>
+            </div>
+            <div class="kpi oee">
+              <svg class="ring" viewBox="0 0 64 64" aria-hidden="true">
+                <circle cx="32" cy="32" r="27" class="ring-bg"/>
+                <circle cx="32" cy="32" r="27" class="ring-fg" id="oeeRing"/>
+              </svg>
+              <div>
+                <span class="kpi-label">Overall efficiency (OEE)</span>
+                <span class="kpi-value"><span id="kOee">–</span><small>%</small></span>
+                <ul class="oee-parts">
+                  <li title="Share of time the cell was running instead of stopped by a fault">Uptime <b id="kOeeA">–</b></li>
+                  <li title="How close the robot is to its ideal speed">Pace <b id="kOeeP">–</b></li>
+                  <li title="Share of boxes that passed inspection">Quality <b id="kOeeQ">–</b></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel practice" aria-labelledby="h-practice">
+            <h2 id="h-practice" class="panel-title">Practise a problem</h2>
+            <p class="panel-sub">Trigger a fault to see how the cell reacts and how to recover.</p>
+            <div class="practice-grid">
+              <button class="tile-btn" data-fault="person"><svg class="ic"><use href="#i-person"/></svg><span>Walk into the robot area</span></button>
+              <button class="tile-btn" data-fault="jam"><svg class="ic"><use href="#i-jam"/></svg><span>Jam the infeed belt</span></button>
+              <button class="tile-btn" data-fault="fillBin"><svg class="ic"><use href="#i-trash"/></svg><span>Fill the reject bin</span></button>
+              <button class="tile-btn" data-fault="badBatch" id="btnBatch" aria-pressed="false"><svg class="ic"><use href="#i-batch"/></svg><span id="batchText">Send a bad batch</span></button>
+            </div>
+          </div>
+
+          <div class="panel chart-panel" aria-labelledby="h-throughput">
+            <div class="panel-head">
+              <h2 id="h-throughput" class="panel-title">Boxes sorted, last 10 minutes</h2>
+              <div class="legend" aria-hidden="true"><span><i class="sw good"></i>Sent to packing</span><span><i class="sw rej"></i>Rejected</span></div>
+            </div>
+            <div class="chart-box"><canvas id="throughputChart" aria-label="Bar chart of boxes sent to packing and rejected every 30 seconds"></canvas></div>
+            <p class="empty" id="throughputEmpty">Bars appear every 30 seconds while the cell runs.</p>
+          </div>
+
+          <div class="panel alarm-panel" aria-labelledby="h-active">
+            <div class="panel-head">
+              <h2 id="h-active" class="panel-title">Active alarms</h2>
+              <a href="#alarms" class="link">See all</a>
+            </div>
+            <ul class="alarm-list" id="alarmListMini"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== QUALITY ===================== -->
+      <section class="view" id="view-quality" aria-labelledby="h-quality" hidden>
+        <h2 class="view-title" id="h-quality">Quality</h2>
+        <div class="q-grid">
+          <div class="panel q-summary">
+            <span class="kpi-label">Passed first time</span>
+            <span class="hero-num"><span id="qYield">–</span><small>%</small></span>
+            <p class="panel-sub" id="qSummary">No boxes inspected yet.</p>
+            <div class="split-bar" aria-hidden="true"><i class="good" id="qBarGood"></i><i class="rej" id="qBarRej"></i></div>
+            <div class="legend"><span><i class="sw good"></i><b id="qPass">0</b> passed</span><span><i class="sw rej"></i><b id="qFail">0</b> rejected</span></div>
+          </div>
+          <div class="panel q-reasons" aria-labelledby="h-reasons">
+            <h3 class="panel-title" id="h-reasons">Why boxes were rejected</h3>
+            <ul class="reasons" id="reasons"></ul>
+          </div>
+          <div class="panel q-table" aria-labelledby="h-insp">
+            <h3 class="panel-title" id="h-insp">Latest inspections</h3>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th scope="col">Box</th><th scope="col">Time</th><th scope="col">Size</th><th scope="col">Result</th><th scope="col">Defect found</th></tr></thead>
+                <tbody id="inspBody"><tr><td colspan="5" class="muted">Start the cell to inspect boxes.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ROBOT ===================== -->
+      <section class="view" id="view-robot" aria-labelledby="h-robot" hidden>
+        <h2 class="view-title" id="h-robot">Robot R1</h2>
+        <div class="r-grid">
+          <div class="panel r-now">
+            <h3 class="panel-title">Right now</h3>
+            <p class="r-doing" id="rDoing">Waiting for the next box</p>
+            <dl class="facts">
+              <div><dt>Gripper</dt><dd id="rGrip">Open</dd></div>
+              <div><dt>Boxes handled</dt><dd id="rCycles">0</dd></div>
+              <div><dt>Average cycle</dt><dd id="rAvg">–</dd></div>
+              <div><dt>Speed setting</dt><dd id="rSpeed">100%</dd></div>
+            </dl>
+            <h3 class="panel-title">Arm position</h3>
+            <dl class="facts joints">
+              <div><dt>Shoulder</dt><dd id="rJ2">0°</dd></div>
+              <div><dt>Elbow</dt><dd id="rJ3">0°</dd></div>
+              <div><dt>Wrist</dt><dd id="rJ5">0°</dd></div>
+            </dl>
+          </div>
+          <div class="panel r-temps" aria-labelledby="h-temps">
+            <h3 class="panel-title" id="h-temps">Joint temperature</h3>
+            <p class="panel-sub">Motors warm up when the robot works hard. Above <span id="hotLimit">57</span>°C, lower the line speed.</p>
+            <ul class="temps" id="temps"></ul>
+          </div>
+          <div class="panel r-cycle" aria-labelledby="h-cycle">
+            <h3 class="panel-title" id="h-cycle">Cycle time per box</h3>
+            <p class="panel-sub">Seconds from picking a box to letting it go. Lower is faster.</p>
+            <div class="chart-box"><canvas id="cycleChart" aria-label="Line chart of the last 30 cycle times"></canvas></div>
+            <p class="empty" id="cycleEmpty">Cycle times appear after the robot handles its first box.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ALARMS ===================== -->
+      <section class="view" id="view-alarms" aria-labelledby="h-alarms" hidden>
+        <div class="view-head">
+          <h2 class="view-title" id="h-alarms">Alarms</h2>
+          <button class="btn sm" id="ackAll">Acknowledge all</button>
+        </div>
+        <ul class="alarm-cards" id="alarmCards"></ul>
+        <div class="panel">
+          <div class="panel-head">
+            <h3 class="panel-title">Event log</h3>
+            <div class="filters" role="group" aria-label="Filter events">
+              <button class="chip" data-filter="all" aria-pressed="true">All</button>
+              <button class="chip" data-filter="problems" aria-pressed="false">Problems only</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th scope="col">Time</th><th scope="col">Type</th><th scope="col">What happened</th></tr></thead>
+              <tbody id="eventBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== REPORTS (served by the C# historian) ===================== -->
+      <section class="view" id="view-reports" aria-labelledby="h-reports" hidden>
+        <div class="view-head">
+          <h2 class="view-title" id="h-reports">Reports</h2>
+          <div class="filters" role="group" aria-label="Time range">
+            <button class="chip" data-range="1" aria-pressed="false">Last hour</button>
+            <button class="chip" data-range="8" aria-pressed="true">Last 8 hours</button>
+            <button class="chip" data-range="24" aria-pressed="false">Last 24 hours</button>
+          </div>
+        </div>
+
+        <div class="panel hist-off" id="histOff" hidden>
+          <svg class="ic hist-icon"><use href="#i-database"/></svg>
+          <div>
+            <h3 class="panel-title">Reports need the C# historian</h3>
+            <p>The historian is a small C# service that records everything the cell does into a database, so you can look back over a whole shift. Open a second terminal in the project folder and run:</p>
+            <pre class="cmd"><code>npm run historian</code></pre>
+            <p class="muted">This page checks again every few seconds and shows the report as soon as the historian is running.</p>
+          </div>
+        </div>
+
+        <div id="histOn" hidden>
+          <p class="hist-warn" id="histWarn" hidden></p>
+          <div class="panel kpis rep-kpis" aria-label="Report totals">
+            <div class="kpi"><span class="kpi-label">Boxes inspected</span><span class="kpi-value" id="rInspected">0</span><span class="kpi-note" id="rRange">Last 8 hours</span></div>
+            <div class="kpi"><span class="kpi-label">Passed first time</span><span class="kpi-value"><span id="rPassRate">–</span><small>%</small></span><span class="kpi-note" id="rPassed">0 passed</span></div>
+            <div class="kpi"><span class="kpi-label">Boxes rejected</span><span class="kpi-value" id="rRejected">0</span><span class="kpi-note" id="rTopReason">No rejects</span></div>
+            <div class="kpi"><span class="kpi-label">Running time</span><span class="kpi-value" id="rRunning">0 min</span><span class="kpi-note" id="rFaultTime">0 min stopped by faults</span></div>
+            <div class="kpi"><span class="kpi-label">Uptime</span><span class="kpi-value"><span id="rAvail">–</span><small>%</small></span><span class="kpi-note">Working time not lost to faults</span></div>
+          </div>
+
+          <div class="rep-grid">
+            <div class="panel rep-chart" aria-labelledby="h-rep-chart">
+              <div class="panel-head">
+                <h3 class="panel-title" id="h-rep-chart">Boxes inspected</h3>
+                <div class="legend" aria-hidden="true"><span><i class="sw good"></i>Passed</span><span><i class="sw rej"></i>Rejected</span></div>
+              </div>
+              <div class="chart-box"><canvas id="reportChart" aria-label="Bar chart of boxes inspected over the selected time range"></canvas></div>
+              <p class="empty" id="reportChartEmpty" hidden>No boxes inspected in this time range.</p>
+            </div>
+
+            <div class="panel rep-time" aria-labelledby="h-rep-time">
+              <h3 class="panel-title" id="h-rep-time">Where the time went</h3>
+              <div class="time-bar" id="timeBar" aria-hidden="true"></div>
+              <ul class="time-list" id="timeList"></ul>
+            </div>
+
+            <div class="panel rep-reasons" aria-labelledby="h-rep-reasons">
+              <h3 class="panel-title" id="h-rep-reasons">Why boxes were rejected</h3>
+              <ul class="reasons" id="repReasons"></ul>
+            </div>
+
+            <div class="panel rep-alarms" aria-labelledby="h-rep-alarms">
+              <h3 class="panel-title" id="h-rep-alarms">Most frequent alarms</h3>
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th scope="col">Alarm</th><th scope="col">Times</th><th scope="col">Last seen</th></tr></thead>
+                  <tbody id="repAlarms"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div class="rep-foot">
+            <p class="muted" id="repNote"></p>
+            <div class="rep-actions">
+              <a class="btn sm" id="csvLink" href="#"><svg class="ic"><use href="#i-download"/></svg>Download inspections (CSV)</a>
+              <button class="btn sm" id="printBtn"><svg class="ic"><use href="#i-print"/></svg>Print report</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <!-- Plain scripts (not modules) so the page also works when index.html is opened directly -->
+  <script src="../sim/cell.js"></script>
+  <script src="js/cellView.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
