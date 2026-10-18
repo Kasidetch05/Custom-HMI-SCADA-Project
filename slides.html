@@ -1,0 +1,571 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Robot Cell HMI, explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Same palette as the dashboard, plus one identity colour per language */
+  :root {
+    --bg: #161c23; --panel: #1d252e; --panel-2: #252f3a; --line: #334150; --line-soft: #2a3542;
+    --text: #ece8df; --muted: #a3adb8; --faint: #7d8894;
+    --ok: #3cc4ae; --warn: #f2c230; --bad: #f0605d; --steel: #8c99a6; --kraft: #c4843f;
+    --js: #f2c230; --html: #e0874a; --css: #6aa6d8; --cs: #a98be0; --sql: #3cc4ae; --json: #8c99a6;
+    --font: "Barlow", "Segoe UI", sans-serif;
+    --num: "Barlow Semi Condensed", "Barlow", sans-serif;
+  }
+  @page { size: 1280px 720px; margin: 0; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #0e1217; color: var(--text); font: 20px/1.45 var(--font); }
+  h1, h2, h3, p, ul, ol { margin: 0; }
+  code, .mono { font-family: Consolas, "Cascadia Mono", monospace; }
+
+  .slide {
+    position: relative; width: 1280px; height: 720px; overflow: hidden;
+    padding: 52px 64px 64px; background: var(--bg);
+    break-after: page; page-break-after: always;
+  }
+  @media screen { .slide { margin: 0 auto 24px; } body.single .slide { margin: 0; } }
+  .slide > h2 { font: 700 40px/1.1 var(--num); letter-spacing: -0.01em; margin-bottom: 8px; }
+  .lead { color: var(--muted); font-size: 21px; max-width: 64ch; margin-bottom: 28px; }
+  .foot { position: absolute; left: 64px; right: 64px; bottom: 22px; display: flex; justify-content: space-between; color: var(--faint); font-size: 14px; }
+
+  .ic { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .panel { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 12px; }
+  .shot { display: block; border-radius: 12px; border: 1px solid var(--line); }
+  .crop { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--line); }
+  .crop img { position: absolute; display: block; }
+  .chip { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px; border-radius: 999px; font-size: 16px; font-weight: 600; border: 1px solid color-mix(in srgb, var(--c) 55%, transparent); background: color-mix(in srgb, var(--c) 14%, transparent); }
+  .chip i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .c-js { --c: var(--js); } .c-html { --c: var(--html); } .c-css { --c: var(--css); } .c-cs { --c: var(--cs); } .c-sql { --c: var(--sql); } .c-json { --c: var(--json); }
+
+  /* 1 Cover */
+  .cover { display: grid; grid-template-columns: 1fr 560px; gap: 48px; align-items: center; padding-top: 0; padding-bottom: 0; }
+  .cover h1 { font: 700 76px/1 var(--num); letter-spacing: -0.02em; }
+  .cover .sub { font-size: 26px; color: var(--muted); margin: 18px 0 36px; max-width: 22ch; line-height: 1.3; }
+  .cover .chips { display: flex; flex-wrap: wrap; gap: 10px; max-width: 520px; }
+  .cover .built { color: var(--faint); font-size: 16px; margin-bottom: 12px; }
+
+  /* 2 What is it */
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; }
+  .big-say { font: 600 30px/1.3 var(--num); margin-bottom: 26px; }
+  .ticks { list-style: none; padding: 0; display: grid; gap: 16px; }
+  .ticks li { display: grid; grid-template-columns: 30px 1fr; gap: 12px; font-size: 21px; }
+  .ticks .ic { color: var(--ok); margin-top: 2px; }
+
+  /* 3 Glossary */
+  .gloss { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .gloss .panel { padding: 20px 22px; }
+  .gloss dt { font: 700 30px/1 var(--num); }
+  .gloss dt small { display: block; font: 500 15px/1.3 var(--font); color: var(--muted); margin-top: 6px; }
+  .gloss dd { margin: 10px 0 0; font-size: 18px; color: var(--text); }
+  .gloss dd em { font-style: normal; color: var(--muted); }
+
+  /* 4 Process flow */
+  .flow { display: grid; grid-template-columns: 1fr 40px 1fr 40px 1fr 40px 1.05fr; align-items: center; margin-top: 8px; }
+  .step { padding: 22px 20px; height: 300px; display: flex; flex-direction: column; gap: 10px; }
+  .step .n { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--panel-2); border: 2px solid var(--line); font: 700 17px var(--num); }
+  .step h3 { font: 700 25px/1.15 var(--num); }
+  .step p { font-size: 17px; color: var(--muted); }
+  .step .ic { width: 40px; height: 40px; color: var(--text); stroke-width: 1.6; }
+  .defects { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+  .defects span { font-size: 13px; padding: 3px 9px; border-radius: 999px; background: var(--panel-2); color: var(--text); }
+  .arrow { color: var(--steel); display: grid; place-items: center; }
+  .arrow svg { width: 30px; height: 30px; }
+  .fork { display: grid; gap: 16px; }
+  .fork .panel { padding: 18px 20px; border-left: 5px solid var(--c); }
+  .fork h3 { font: 700 23px/1.1 var(--num); display: flex; align-items: center; gap: 8px; }
+  .fork h3 .ic { color: var(--c); width: 26px; height: 26px; }
+  .fork p { font-size: 16px; color: var(--muted); margin-top: 6px; }
+  .flow-note { margin-top: 26px; color: var(--muted); font-size: 18px; }
+
+  /* 5 Tour */
+  .tour { display: grid; grid-template-columns: 760px 1fr; gap: 32px; margin-top: 6px; }
+  .tour .wrap { position: relative; }
+  .pin { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; background: var(--warn); color: #1d1600; font: 700 18px/34px var(--num); text-align: center; box-shadow: 0 0 0 4px rgba(22,28,35,.85); }
+  .legend-list { list-style: none; padding: 0; display: grid; gap: 13px; align-content: start; }
+  .legend-list li { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; font-size: 17px; color: var(--muted); }
+  .legend-list b { display: block; color: var(--text); font-size: 19px; }
+  .legend-list .num { width: 30px; height: 30px; border-radius: 50%; background: var(--warn); color: #1d1600; font: 700 16px/30px var(--num); text-align: center; }
+
+  /* 6 Controls */
+  .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 40px; margin-top: 4px; }
+  .ctl { display: grid; grid-template-columns: 236px 1fr; gap: 20px; align-items: center; min-height: 84px; }
+  .btn.estop { white-space: nowrap; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 56px; padding: 0 20px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); font-weight: 600; font-size: 19px; }
+  .btn .ic { width: 22px; height: 22px; }
+  .btn.primary { background: var(--ok); border-color: var(--ok); color: #082420; }
+  .btn.estop { justify-content: flex-start; background: #3a300c; border: 2px solid #5b4a10; padding-left: 12px; }
+  .knob { width: 36px; height: 36px; border-radius: 50%; background: radial-gradient(circle at 38% 32%, #ff7a6e, #d42f2a 60%, #9e1c19); box-shadow: 0 0 0 4px var(--warn); }
+  .slider { display: grid; gap: 6px; padding: 0 6px; }
+  .slider .track { position: relative; height: 8px; border-radius: 4px; background: var(--line); }
+  .slider .track i { position: absolute; inset: 0 40% 0 0; background: var(--ok); border-radius: 4px; }
+  .slider .track b { position: absolute; left: 60%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: var(--ok); border: 3px solid var(--bg); }
+  .slider span { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; }
+  .ctl p { font-size: 18px; color: var(--muted); }
+  .ctl p b { color: var(--text); font-weight: 600; }
+
+  /* 7 Colours */
+  .colours { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 4px; }
+  .colour { padding: 22px; border-top: 6px solid var(--c); display: flex; flex-direction: column; gap: 10px; min-height: 250px; }
+  .colour .ic { color: var(--c); width: 34px; height: 34px; }
+  .colour h3 { font: 700 26px/1.1 var(--num); }
+  .colour p { font-size: 17px; color: var(--muted); }
+  .colour .eg { margin-top: auto; font-size: 15px; color: var(--text); background: var(--panel-2); border-radius: 8px; padding: 8px 10px; }
+  .rule { margin-top: 24px; display: flex; align-items: center; gap: 14px; font-size: 20px; }
+  .rule .ic { color: var(--warn); }
+
+  /* 8 Practise */
+  .practise { display: grid; grid-template-columns: 560px 1fr; gap: 32px; align-items: start; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; color: var(--muted); font-weight: 500; font-size: 15px; padding: 0 10px 8px 0; border-bottom: 1px solid var(--line); }
+  td { padding: 11px 10px 11px 0; border-bottom: 1px solid var(--line-soft); font-size: 16px; vertical-align: top; }
+  td:first-child { font-weight: 600; font-size: 17px; width: 30%; }
+  .caption { margin-top: 14px; font-size: 16px; color: var(--muted); }
+
+  /* 9 Pages */
+  .pages { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 32px; margin-top: 12px; }
+  .page .cap { display: flex; align-items: baseline; gap: 12px; margin-top: 10px; }
+  .page h3 { font: 700 24px/1.1 var(--num); }
+  .page p { font-size: 16px; color: var(--muted); }
+
+  /* 10 Architecture */
+  .arch { position: relative; height: 500px; }
+  .node { position: absolute; width: 380px; padding: 18px 20px; }
+  .node h3 { font: 700 25px/1.1 var(--num); margin: 8px 0 6px; }
+  .node p { font-size: 16px; color: var(--muted); }
+  .node .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .node .chip { height: 28px; font-size: 14px; padding: 0 10px; }
+  .node .role { display: inline-block; font-size: 14px; color: var(--warn); font-weight: 600; margin-top: 8px; }
+  .arch svg.lines { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .arch .lbl { position: absolute; font-size: 15px; color: var(--text); background: var(--bg); padding: 2px 8px; border-radius: 6px; white-space: nowrap; }
+  .arch .lbl small { color: var(--muted); font-size: 14px; }
+
+  /* 11 Languages */
+  .langs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .lang { padding: 20px 22px; border-top: 6px solid var(--c); min-height: 228px; display: flex; flex-direction: column; gap: 8px; }
+  .lang h3 { font: 700 30px/1 var(--num); }
+  .lang .where { font-size: 14px; color: var(--muted); }
+  .lang .where code { color: var(--text); font-size: 14px; }
+  .lang p { font-size: 17px; }
+
+  /* 12 Why */
+  .why { display: grid; gap: 10px; }
+  .why-row { display: grid; grid-template-columns: 170px 1fr; gap: 20px; align-items: center; padding: 12px 18px; }
+  .why-row .chip { justify-self: start; }
+  .why-row p { font-size: 17px; }
+  .why-row p b { font-weight: 600; }
+
+  /* 13 Tools */
+  .tools { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 28px; }
+  .tool { display: grid; grid-template-columns: 268px 1fr; gap: 16px; align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--line-soft); }
+  .tool b { font-size: 20px; }
+  .tool span { font-size: 17px; color: var(--muted); }
+  .tool .chip { height: 24px; font-size: 12px; padding: 0 8px; margin-left: 6px; vertical-align: 2px; }
+
+  /* 14 Folder */
+  .tree { font: 17px/1.75 Consolas, "Cascadia Mono", monospace; padding: 22px 26px; }
+  .tree .row { display: grid; grid-template-columns: 330px 1fr; gap: 16px; }
+  .tree .row span:last-child { font-family: var(--font); color: var(--muted); font-size: 16px; }
+  .tree .dir { color: var(--warn); }
+  .tree .ind1 { padding-left: 24px; } .tree .ind2 { padding-left: 48px; }
+
+  /* 15 Run */
+  .run { display: grid; grid-template-columns: 1.25fr 1fr; gap: 28px; align-items: start; }
+  .steps-run { list-style: none; padding: 0; display: grid; gap: 14px; }
+  .steps-run li { display: grid; grid-template-columns: 40px 1fr; gap: 14px; }
+  .steps-run .n { width: 36px; height: 36px; border-radius: 50%; background: var(--ok); color: #082420; font: 700 18px/36px var(--num); text-align: center; }
+  .steps-run h3 { font-size: 20px; font-weight: 600; }
+  .steps-run p { font-size: 16px; color: var(--muted); }
+  .cmd { display: inline-block; margin-top: 6px; padding: 6px 12px; border-radius: 8px; background: #10151b; border: 1px solid var(--line); font: 600 16px Consolas, "Cascadia Mono", monospace; color: var(--text); }
+  .alt { padding: 22px; }
+  .alt h3 { font: 700 24px/1.15 var(--num); margin-bottom: 10px; }
+  .alt p { font-size: 17px; color: var(--muted); margin-bottom: 10px; }
+
+  /* 16 Easy */
+  .easy { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .easy .panel { padding: 22px; min-height: 200px; }
+  .easy .ic { color: var(--ok); width: 32px; height: 32px; margin-bottom: 10px; }
+  .easy h3 { font: 700 24px/1.15 var(--num); margin-bottom: 8px; }
+  .easy p { font-size: 17px; color: var(--muted); }
+
+  /* 17 Next */
+  .next { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px; }
+  .next .panel { padding: 20px 22px; display: grid; grid-template-columns: 40px 1fr; gap: 14px; }
+  .next .ic { color: var(--warn); width: 30px; height: 30px; }
+  .next h3 { font-size: 21px; font-weight: 600; }
+  .next p { font-size: 17px; color: var(--muted); }
+  .closing { font: 600 26px/1.3 var(--num); max-width: 48ch; }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></symbol>
+    <symbol id="i-robot" viewBox="0 0 24 24"><path d="M4 21h9"/><path d="M6 21v-4h5v4"/><circle cx="8.5" cy="13.5" r="2"/><path d="m9.6 11.8 3.6-5.6"/><circle cx="14.5" cy="5" r="2"/><path d="m16.3 5.8 2.7 2.7"/><path d="M17 11l2.5-2.5L22 11"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5Z"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 9v6M14 9v6"/></symbol>
+    <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z"/></symbol>
+    <symbol id="i-hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5M14 10V4a2 2 0 0 0-4 0v6M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></symbol>
+    <symbol id="i-steps" viewBox="0 0 24 24"><path d="M3 6h4v4H3zM10 6h4v4h-4zM17 6h4v4h-4z"/><path d="M3 16h18M7 8h3M14 8h3"/></symbol>
+    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></symbol>
+    <symbol id="i-practice" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></symbol>
+    <symbol id="i-plug" viewBox="0 0 24 24"><path d="M12 22v-5M9 8V2M15 8V2M18 8v5a6 6 0 0 1-12 0V8Z"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+    <symbol id="i-test" viewBox="0 0 24 24"><path d="M9 2h6M10 2v6L4.5 18.5A2 2 0 0 0 6.3 21h11.4a2 2 0 0 0 1.8-2.5L14 8V2"/><path d="M7 15h10"/></symbol>
+  </defs>
+</svg>
+
+<!-- 1 · Cover -->
+<section class="slide cover">
+  <div>
+    <h1>Robot Cell HMI</h1>
+    <p class="sub">A simulated factory control screen, explained for beginners</p>
+    <p class="built">Built with</p>
+    <div class="chips">
+      <span class="chip c-js"><i></i>JavaScript</span>
+      <span class="chip c-html"><i></i>HTML</span>
+      <span class="chip c-css"><i></i>CSS</span>
+      <span class="chip c-cs"><i></i>C#</span>
+      <span class="chip c-sql"><i></i>SQL</span>
+      <span class="chip c-json"><i></i>JSON</span>
+    </div>
+  </div>
+  <div class="crop" style="width:560px;height:370px"><img src="img/overview.png" alt="The live robot cell" style="width:1014px;left:-172px;top:-67px"></div>
+</section>
+
+<!-- 2 · What is it -->
+<section class="slide">
+  <h2>What is this project?</h2>
+  <p class="lead">Think of it as a video game version of a small factory, with the real control screen a factory worker would use.</p>
+  <div class="two">
+    <div>
+      <p class="big-say">A robot checks boxes on a conveyor belt. Good boxes get packed, bad boxes get thrown out. You watch and control it from one screen.</p>
+      <ul class="ticks">
+        <li><svg class="ic"><use href="#i-check"/></svg><span>The robot, belts and camera move live, like the real thing</span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span>You can start, stop and fix problems with buttons</span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span>Everything is simulated, so no real machines are needed</span></li>
+        <li><svg class="ic"><use href="#i-check"/></svg><span>It keeps a history so you can review a whole shift</span></li>
+      </ul>
+    </div>
+    <img class="shot" src="img/overview.png" alt="The main screen" style="width:540px">
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>2 / 17</span></div>
+</section>
+
+<!-- 3 · Glossary -->
+<section class="slide">
+  <h2>Words you will hear</h2>
+  <p class="lead">Factories have their own vocabulary. Here is what each word means in plain language.</p>
+  <dl class="gloss">
+    <div class="panel"><dt>HMI<small>Human Machine Interface</small></dt><dd>The screen a person uses to watch and control a machine. <em>This dashboard is an HMI.</em></dd></div>
+    <div class="panel"><dt>SCADA<small>Supervisory Control and Data Acquisition</small></dt><dd>A system that watches many machines, collects their data and raises alarms.</dd></div>
+    <div class="panel"><dt>PLC<small>Programmable Logic Controller</small></dt><dd>The small computer inside a machine that actually moves the motors. <em>Our simulator pretends to be one.</em></dd></div>
+    <div class="panel"><dt>Simulation</dt><dd>A program that behaves like a real machine, so you can learn and test without the hardware.</dd></div>
+    <div class="panel"><dt>Historian</dt><dd>A program that records everything a machine does into a database, so you can look back later.</dd></div>
+    <div class="panel"><dt>OEE<small>Overall Equipment Effectiveness</small></dt><dd>One score for how well the machine is doing. It combines uptime, speed and quality.</dd></div>
+  </dl>
+  <div class="foot"><span>Robot Cell HMI</span><span>3 / 17</span></div>
+</section>
+
+<!-- 4 · The factory -->
+<section class="slide">
+  <h2>The factory we simulate</h2>
+  <p class="lead">Every box goes through three steps, then gets sorted.</p>
+  <div class="flow">
+    <div class="panel step"><span class="n">1</span><svg class="ic"><use href="#i-box"/></svg><h3>Box arrives</h3><p>A box rides in on the conveyor belt.</p></div>
+    <div class="arrow"><svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="panel step"><span class="n">2</span><svg class="ic"><use href="#i-camera"/></svg><h3>Camera checks it</h3><p>A vision camera looks for four kinds of defect.</p>
+      <div class="defects"><span>Open flap</span><span>Missing label</span><span>Dented corner</span><span>Wrong size</span></div></div>
+    <div class="arrow"><svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="panel step"><span class="n">3</span><svg class="ic"><use href="#i-robot"/></svg><h3>Robot picks it up</h3><p>The robot arm grips the box and lifts it off the belt.</p></div>
+    <div class="arrow"><svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+    <div class="fork">
+      <div class="panel" style="--c: var(--ok)"><h3><svg class="ic"><use href="#i-check"/></svg>Good box</h3><p>Placed on the packing line, then packed 6 to a shipping case.</p></div>
+      <div class="panel" style="--c: var(--bad)"><h3><svg class="ic"><use href="#i-x"/></svg>Bad box</h3><p>Dropped into the red reject bin. Someone must empty it when it fills up.</p></div>
+    </div>
+  </div>
+  <p class="flow-note">About 11 boxes a minute at normal speed. Roughly 1 in 10 boxes has a defect.</p>
+  <div class="foot"><span>Robot Cell HMI</span><span>4 / 17</span></div>
+</section>
+
+<!-- 5 · Tour -->
+<section class="slide">
+  <h2>A tour of the main screen</h2>
+  <div class="tour">
+    <div class="wrap">
+      <img class="shot" src="img/overview.png" alt="Overview page" style="width:760px">
+      <span class="pin" style="left:112px;top:100px">1</span>
+      <span class="pin" style="left:470px;top:95px">2</span>
+      <span class="pin" style="left:104px;top:359px">3</span>
+      <span class="pin" style="left:742px;top:103px">4</span>
+      <span class="pin" style="left:742px;top:166px">5</span>
+      <span class="pin" style="left:104px;top:428px">6</span>
+    </div>
+    <ol class="legend-list">
+      <li><span class="num">1</span><span><b>Pages menu</b>Overview, Quality, Robot, Alarms and Reports</span></li>
+      <li><span class="num">2</span><span><b>Live animation</b>The robot, belts and camera, moving in real time</span></li>
+      <li><span class="num">3</span><span><b>Process steps</b>Lights up the step happening right now</span></li>
+      <li><span class="num">4</span><span><b>Status banner</b>Says what is happening and what you should do next</span></li>
+      <li><span class="num">5</span><span><b>Controls</b>Start, Stop, Reset, emergency stop and line speed</span></li>
+      <li><span class="num">6</span><span><b>Today's numbers</b>Boxes packed, rejected, pass rate, speed and OEE</span></li>
+    </ol>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>5 / 17</span></div>
+</section>
+
+<!-- 6 · Controls -->
+<section class="slide">
+  <h2>Controlling the cell</h2>
+  <p class="lead">Six controls are all you need. Buttons you can't use right now are greyed out, so you can't press the wrong one.</p>
+  <div class="controls">
+    <div class="ctl"><span class="btn primary"><svg class="ic"><use href="#i-play"/></svg>Start</span><p><b>Runs the cell.</b> Boxes start arriving and the robot gets to work.</p></div>
+    <div class="ctl"><span class="btn estop"><span class="knob"></span>Emergency stop</span><p><b>Stops everything at once.</b> Use it if something looks dangerous.</p></div>
+    <div class="ctl"><span class="btn"><svg class="ic"><use href="#i-stop"/></svg>Stop</span><p><b>Stops politely.</b> The robot finishes the box it is holding first.</p></div>
+    <div class="ctl"><div class="slider"><div class="track"><i></i><b></b></div><span><em style="font-style:normal">Slower</em><em style="font-style:normal">Faster</em></span></div><p><b>Line speed.</b> From 25% to 150%. Faster makes more boxes, but the robot heats up.</p></div>
+    <div class="ctl"><span class="btn"><svg class="ic"><use href="#i-reset"/></svg>Reset</span><p><b>Clears a fault</b> after you have fixed the problem. Then press Start again.</p></div>
+    <div class="ctl"><span class="btn"><svg class="ic"><use href="#i-trash"/></svg>Empty bin</span><p><b>Empties the reject bin.</b> When it is full, the robot waits for you.</p></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>6 / 17</span></div>
+</section>
+
+<!-- 7 · Colours -->
+<section class="slide">
+  <h2>Colours always mean the same thing</h2>
+  <p class="lead">Most of the screen is calm grey. Bright colour only appears when something needs your attention.</p>
+  <div class="colours">
+    <div class="panel colour" style="--c: var(--ok)"><svg class="ic"><use href="#i-check"/></svg><h3>Teal</h3><p>Running normally, or a box passed inspection.</p><span class="eg">"Running", ✓ passed</span></div>
+    <div class="panel colour" style="--c: var(--warn)"><svg class="ic"><use href="#i-alert"/></svg><h3>Yellow</h3><p>A warning. Not dangerous, but you should do something soon.</p><span class="eg">"Reject bin is full"</span></div>
+    <div class="panel colour" style="--c: var(--bad)"><svg class="ic"><use href="#i-alert"/></svg><h3>Red</h3><p>An alarm. The cell has stopped and needs you now.</p><span class="eg">"Emergency stop", ✕ rejected</span></div>
+    <div class="panel colour" style="--c: var(--steel)"><svg class="ic"><use href="#i-pause"/></svg><h3>Grey</h3><p>Stopped or waiting. Nothing is wrong.</p><span class="eg">"Stopped", "Ready"</span></div>
+  </div>
+  <p class="rule"><svg class="ic"><use href="#i-info"/></svg>Colour is never the only clue. Every state also has an icon and words, so colour-blind users can read it too.</p>
+  <div class="foot"><span>Robot Cell HMI</span><span>7 / 17</span></div>
+</section>
+
+<!-- 8 · Practise -->
+<section class="slide">
+  <h2>Practise a problem</h2>
+  <p class="lead">Four buttons cause a fault on purpose, so you can learn what to do before it happens for real.</p>
+  <div class="practise">
+    <div>
+      <div class="crop" style="width:560px;height:370px"><img src="img/fault.png" alt="Safety stop with a person in the robot area" style="width:1014px;left:-172px;top:-67px"></div>
+      <p class="caption">"Walk into the robot area": the area turns red, the robot freezes and the banner says what to do.</p>
+    </div>
+    <table>
+      <thead><tr><th>Practice button</th><th>What happens</th><th>How to fix it</th></tr></thead>
+      <tbody>
+        <tr><td>Walk into the robot area</td><td>Safety stop. Everything freezes.</td><td>Wait for the person to leave, press Reset, then Start</td></tr>
+        <tr><td>Jam the infeed belt</td><td>The belt stops with an alarm.</td><td>Press Reset, then Start</td></tr>
+        <tr><td>Fill the reject bin</td><td>The robot holds bad boxes and waits.</td><td>Press Empty bin</td></tr>
+        <tr><td>Send a bad batch</td><td>Half the boxes are faulty. A "High reject rate" warning appears.</td><td>Press the button again to stop it</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>8 / 17</span></div>
+</section>
+
+<!-- 9 · Pages -->
+<section class="slide">
+  <h2>The other pages, from the menu on the left</h2>
+  <div class="pages">
+    <div class="page"><div class="crop" style="width:560px;height:196px"><img src="img/quality.png" alt="Quality page" style="width:720px;left:-120px;top:-48px"></div><div class="cap"><h3>Quality</h3><p>Pass rate, reject reasons and the latest inspections</p></div></div>
+    <div class="page"><div class="crop" style="width:560px;height:196px"><img src="img/robot.png" alt="Robot page" style="width:720px;left:-120px;top:-48px"></div><div class="cap"><h3>Robot</h3><p>What it is doing, arm angles, motor heat, cycle time</p></div></div>
+    <div class="page"><div class="crop" style="width:560px;height:196px"><img src="img/alarms.png" alt="Alarms page" style="width:720px;left:-120px;top:-48px"></div><div class="cap"><h3>Alarms</h3><p>Each alarm with what to do, plus the event log</p></div></div>
+    <div class="page"><div class="crop" style="width:560px;height:196px"><img src="img/reports.png" alt="Reports page" style="width:720px;left:-120px;top:-48px"></div><div class="cap"><h3>Reports</h3><p>Shift history from the C# historian, CSV and print</p></div></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>9 / 17</span></div>
+</section>
+
+<!-- 10 · Architecture -->
+<section class="slide">
+  <h2>How the pieces fit together</h2>
+  <div class="arch">
+    <svg class="lines" viewBox="0 0 1152 500" aria-hidden="true">
+      <defs>
+        <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8c99a6"/></marker>
+      </defs>
+      <g stroke="#8c99a6" stroke-width="2.5" fill="none">
+        <path d="M384 70 H768" marker-end="url(#ah)"/>
+        <path d="M768 130 H384" marker-end="url(#ah)"/>
+        <path d="M300 182 L840 318" marker-end="url(#ah)"/>
+        <path d="M768 410 H384" marker-end="url(#ah)"/>
+        <path d="M960 318 V200" marker-end="url(#ah)"/>
+      </g>
+    </svg>
+    <div class="panel node" style="left:0;top:10px">
+      <div class="chips"><span class="chip c-js"><i></i>JavaScript (Node.js)</span></div>
+      <h3>Simulator server</h3>
+      <p>Moves the robot, belts and camera 20 times a second and keeps score.</p>
+      <span class="role">Plays the PLC (the machine's brain)</span>
+    </div>
+    <div class="panel node" style="left:772px;top:10px">
+      <div class="chips"><span class="chip c-html"><i></i>HTML</span><span class="chip c-css"><i></i>CSS</span><span class="chip c-js"><i></i>JavaScript</span></div>
+      <h3>Dashboard in your browser</h3>
+      <p>Draws the cell and the numbers, and sends your button presses back.</p>
+      <span class="role">The HMI (the screen)</span>
+    </div>
+    <div class="panel node" style="left:0;top:322px">
+      <div class="chips"><span class="chip c-sql"><i></i>SQL (SQLite)</span></div>
+      <h3>Database file</h3>
+      <p>One file, <code>history.db</code>, that stores every inspection, alarm and stop.</p>
+      <span class="role">The filing cabinet</span>
+    </div>
+    <div class="panel node" style="left:772px;top:322px">
+      <div class="chips"><span class="chip c-cs"><i></i>C# (.NET 10)</span></div>
+      <h3>C# historian</h3>
+      <p>Listens to the simulator, saves the history and builds reports.</p>
+      <span class="role">The record keeper</span>
+    </div>
+    <span class="lbl" style="left:446px;top:44px">Live updates, 20 a second</span>
+    <span class="lbl" style="left:476px;top:140px">Your button presses</span>
+    <span class="lbl" style="left:470px;top:232px">The same live updates</span>
+    <span class="lbl" style="left:448px;top:420px">Saves and looks up history</span>
+    <span class="lbl" style="left:976px;top:248px">Reports</span>
+  </div>
+  <p class="caption">Every message between the parts is written in JSON, a simple text format both JavaScript and C# understand.</p>
+  <div class="foot"><span>Robot Cell HMI</span><span>10 / 17</span></div>
+</section>
+
+<!-- 11 · Languages -->
+<section class="slide">
+  <h2>The languages used, and what each one does</h2>
+  <p class="lead">Six languages, each doing the job it is best at.</p>
+  <div class="langs">
+    <div class="panel lang" style="--c: var(--js)"><h3>JavaScript</h3><span class="where">In <code>server.js</code>, <code>sim/cell.js</code>, <code>public/js/</code></span><p>Runs the simulation and the web server, draws the moving robot and makes the buttons work.</p></div>
+    <div class="panel lang" style="--c: var(--html)"><h3>HTML</h3><span class="where">In <code>public/index.html</code></span><p>Builds the page itself: the menu, panels, buttons, tables and text.</p></div>
+    <div class="panel lang" style="--c: var(--css)"><h3>CSS</h3><span class="where">In <code>public/css/style.css</code></span><p>Makes it look right: colours, fonts, layout, the phone version and the print version.</p></div>
+    <div class="panel lang" style="--c: var(--cs)"><h3>C#</h3><span class="where">In <code>historian/*.cs</code></span><p>The historian service. Records history in the background and serves the Reports page.</p></div>
+    <div class="panel lang" style="--c: var(--sql)"><h3>SQL</h3><span class="where">Inside <code>historian/HistoryStore.cs</code></span><p>Saves data into the database and asks questions like "how many boxes failed today?"</p></div>
+    <div class="panel lang" style="--c: var(--json)"><h3>JSON</h3><span class="where">In every message, and in <code>appsettings.json</code></span><p>A simple text format the parts use to send data to each other.</p></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>11 / 17</span></div>
+</section>
+
+<!-- 12 · Why -->
+<section class="slide">
+  <h2>Why these languages?</h2>
+  <p class="lead">Each choice has a reason.</p>
+  <div class="why">
+    <div class="panel why-row"><span class="chip c-js"><i></i>JavaScript</span><p><b>It is the only language web browsers run.</b> With Node.js the server can use the same language, so you only need to learn one language for both. It is good at fast, live updates.</p></div>
+    <div class="panel why-row"><span class="chip c-html"><i></i>HTML</span><p><b>It is the standard way to build any web page.</b> The dashboard opens on a PC, tablet or phone without installing anything.</p></div>
+    <div class="panel why-row"><span class="chip c-css"><i></i>CSS</span><p><b>It keeps the look separate from the content.</b> One file changes the colours, the phone layout or the print layout without touching the page.</p></div>
+    <div class="panel why-row"><span class="chip c-cs"><i></i>C#</span><p><b>It is widely used in real industrial software</b>, such as SCADA, MES and Windows HMIs. It catches mistakes before the program runs, and it is fast and stable for services that run all day.</p></div>
+    <div class="panel why-row"><span class="chip c-sql"><i></i>SQL</span><p><b>It is the standard language for databases.</b> SQLite keeps the whole database in one file with no setup.</p></div>
+    <div class="panel why-row"><span class="chip c-json"><i></i>JSON</span><p><b>Both JavaScript and C# read it easily</b>, and people can read it too. That makes it ideal for sending data between the parts.</p></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>12 / 17</span></div>
+</section>
+
+<!-- 13 · Tools -->
+<section class="slide">
+  <h2>Tools and libraries</h2>
+  <p class="lead">Ready-made building blocks, so the project didn't have to start from zero.</p>
+  <div class="tools">
+    <div class="tool"><b>Node.js</b><span>Runs JavaScript outside the browser, on the server</span></div>
+    <div class="tool"><b>.NET 10 and ASP.NET Core</b><span>Runs the C# historian as a small web service</span></div>
+    <div class="tool"><b>Express</b><span>A simple web server that sends the dashboard to your browser</span></div>
+    <div class="tool"><b>Microsoft.Data.Sqlite</b><span>Lets C# read and write the SQLite database</span></div>
+    <div class="tool"><b>ws (WebSocket)</b><span>Keeps a live two-way connection open for instant updates</span></div>
+    <div class="tool"><b>Chart.js</b><span>Draws the bar and line charts</span></div>
+    <div class="tool"><b>npm and dotnet</b><span>Command-line tools that install and run each part</span></div>
+    <div class="tool"><b>Barlow font</b><span>An industrial-style typeface, free from Google Fonts</span></div>
+    <div class="tool"><b>HTML canvas</b><span>The browser feature used to draw the animated robot</span></div>
+    <div class="tool"><b>VS Code</b><span>The code editor used to write and run everything</span></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>13 / 17</span></div>
+</section>
+
+<!-- 14 · Folder -->
+<section class="slide">
+  <h2>What is in the project folder</h2>
+  <p class="lead">Each file has one job.</p>
+  <div class="panel tree">
+    <div class="row"><span class="dir">Custom HMI-SCADA Project/</span><span></span></div>
+    <div class="row"><span class="ind1">server.js</span><span>Starts the simulator server (JavaScript)</span></div>
+    <div class="row"><span class="ind1 dir">sim/</span><span></span></div>
+    <div class="row"><span class="ind2">cell.js</span><span>The whole simulated factory: robot, belts, camera, alarms (JavaScript)</span></div>
+    <div class="row"><span class="ind1 dir">public/</span><span>Everything the browser shows</span></div>
+    <div class="row"><span class="ind2">index.html</span><span>The page layout for all five pages (HTML)</span></div>
+    <div class="row"><span class="ind2">css/style.css</span><span>Colours, layout, phone and print versions (CSS)</span></div>
+    <div class="row"><span class="ind2">js/cellView.js</span><span>Draws the animated robot cell (JavaScript)</span></div>
+    <div class="row"><span class="ind2">js/app.js</span><span>Fills in the dashboard and sends button presses (JavaScript)</span></div>
+    <div class="row"><span class="ind1 dir">historian/</span><span>The C# historian service</span></div>
+    <div class="row"><span class="ind2">*.cs (5 files)</span><span>Records history and builds reports (C# with SQL inside)</span></div>
+    <div class="row"><span class="ind1">README.md</span><span>Full instructions</span></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>14 / 17</span></div>
+</section>
+
+<!-- 15 · Run -->
+<section class="slide">
+  <h2>How to run it</h2>
+  <p class="lead">Open the project folder in VS Code and use its built-in terminal.</p>
+  <div class="run">
+    <ol class="steps-run">
+      <li><span class="n">1</span><div><h3>Install the tools once</h3><p>Node.js, plus the .NET 10 SDK if you want the Reports page.</p></div></li>
+      <li><span class="n">2</span><div><h3>Download the libraries once</h3><span class="cmd">npm install</span></div></li>
+      <li><span class="n">3</span><div><h3>Start the simulator</h3><span class="cmd">npm start</span><p>Then open http://localhost:3000 and press Start.</p></div></li>
+      <li><span class="n">4</span><div><h3>Optional: start the historian</h3><span class="cmd">npm run historian</span><p>Run it in a second terminal. The Reports page fills in.</p></div></li>
+    </ol>
+    <div class="panel alt">
+      <h3>Just want a quick look?</h3>
+      <p>Double-click <code>public/index.html</code>. The simulation then runs inside your browser, with no server needed.</p>
+      <p>The only things missing are the shared history and the Reports page, because those need the servers.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>15 / 17</span></div>
+</section>
+
+<!-- 16 · Easy -->
+<section class="slide">
+  <h2>Made easy to use on purpose</h2>
+  <p class="lead">Anyone should be able to run the cell without training.</p>
+  <div class="easy">
+    <div class="panel"><svg class="ic"><use href="#i-chat"/></svg><h3>Plain-language messages</h3><p>The banner always says what is happening and what to do next, for example "Wait until the area is clear, then press Reset."</p></div>
+    <div class="panel"><svg class="ic"><use href="#i-hand"/></svg><h3>Big, clear buttons</h3><p>Every button has an icon and a word. Buttons you can't use are greyed out.</p></div>
+    <div class="panel"><svg class="ic"><use href="#i-check"/></svg><h3>One meaning per colour</h3><p>Teal is fine, yellow is a warning, red is an alarm. Words always go with the colour.</p></div>
+    <div class="panel"><svg class="ic"><use href="#i-steps"/></svg><h3>Numbered process steps</h3><p>You can see exactly which of the 5 steps the current box is in.</p></div>
+    <div class="panel"><svg class="ic"><use href="#i-practice"/></svg><h3>Safe practice mode</h3><p>Trigger faults on purpose and learn how to recover, without risk.</p></div>
+    <div class="panel"><svg class="ic"><use href="#i-phone"/></svg><h3>Works anywhere</h3><p>The layout adapts to a phone or tablet, and reports print on clean white paper.</p></div>
+  </div>
+  <div class="foot"><span>Robot Cell HMI</span><span>16 / 17</span></div>
+</section>
+
+<!-- 17 · Next -->
+<section class="slide">
+  <h2>Ideas for what to learn next</h2>
+  <p class="lead">Each idea builds on what is already there.</p>
+  <div class="next">
+    <div class="panel"><svg class="ic"><use href="#i-plug"/></svg><div><h3>Connect a real PLC</h3><p>Swap the simulator for real hardware using Modbus or OPC UA. The dashboard stays the same.</p></div></div>
+    <div class="panel"><svg class="ic"><use href="#i-plus"/></svg><div><h3>Add a second robot</h3><p>Extend the simulation with another station on the line.</p></div></div>
+    <div class="panel"><svg class="ic"><use href="#i-lock"/></svg><div><h3>Add operator logins</h3><p>Only trained users may press Reset or change the speed.</p></div></div>
+    <div class="panel"><svg class="ic"><use href="#i-test"/></svg><div><h3>Write automatic tests</h3><p>Check the C# report maths with unit tests every time the code changes.</p></div></div>
+  </div>
+  <p class="closing">Read the README file in the project folder for every detail.</p>
+  <div class="foot"><span>Robot Cell HMI</span><span>17 / 17</span></div>
+</section>
+
+<script>
+  // Screen helper for previews: slides.html#5 shows only slide 5
+  const n = Number(location.hash.slice(1));
+  if (n) {
+    document.body.classList.add('single');
+    document.querySelectorAll('.slide').forEach((s, i) => { if (i + 1 !== n) s.style.display = 'none'; });
+  }
+</script>
+</body>
+</html>
