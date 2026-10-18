@@ -1,0 +1,9 @@
+node_modules/
+
+# C# historian build output and recorded data
+historian/bin/
+historian/obj/
+historian/data/
+
+# Local editor/tool settings
+.claude/
